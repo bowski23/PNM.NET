@@ -14,7 +14,16 @@ namespace PNM
         public readonly int Height;
         public readonly int MaxValue;
         public readonly int BytesPerPixelChannel;
-        public byte[] Bytes;
+        private byte[] _bytes;
+        public byte[] Bytes
+        {
+            get { return _bytes; }
+            set
+            {
+                if (value.Length != Width * Height * BytesPerPixelChannel) throw new Exception("Invalid byte array length");
+                _bytes = value;
+            }
+        }
 
         public ushort[] WideBuffer
         {
@@ -155,9 +164,57 @@ namespace PNM
             return pnm;
         }
 
-        public void ToFile(string path)
+        private string ToHeader(string comment)
         {
-            throw new NotImplementedException();
+            string header = $"{Number}\n";
+            if (comment != "") header += $"#{comment}\n";
+            header += $"{Width} {Height}\n";
+            if (Number != MagicNumber.P1 && Number != MagicNumber.P4) header += $"{MaxValue}\n";
+            return header;
+        }
+
+        public void WriteToStream(StreamWriter writer, string comment = "")
+        {
+            writer.Write(ToHeader(comment));
+            if(Number.IsBinary)
+            {
+                writer.Flush();
+                writer.BaseStream.Write(Bytes, 0, Bytes.Length);
+            }
+            else {
+                if(BytesPerPixelChannel == 1)
+                {
+                    for (int i = 0; i < Bytes.Length; i++)
+                    {
+                        writer.Write($"{Bytes[i]} ");
+                        if (i % 12 == 11) writer.Write("\n");
+                    }
+                }else{
+                    var wideBuffer = WideBuffer;
+                    for (int i = 0; i < wideBuffer.Length; i++)
+                    {
+                        writer.Write($"{wideBuffer[i]} ");
+                        if (i % 12 == 11) writer.Write("\n");   
+                    }
+                }
+            }
+        }
+
+        public bool ToFile(string path, string comment = "")
+        {
+            try
+            {
+                using (var writer = File.CreateText(path))
+                {
+                    WriteToStream(writer, comment);
+                }
+                return true;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Could not write to file {path}, exception: {e.Message}");
+                return false;
+            }
         }
     }
 

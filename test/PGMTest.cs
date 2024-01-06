@@ -1,10 +1,39 @@
 using PNM;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace test;
 
 [TestClass]
 public class PGMTest
 {
+    SHA1 sha = SHA1.Create();
+
+    public string GetFileHash(string filename)
+    {
+        var clearBytes = File.ReadAllBytes(filename);
+        var hashedBytes = sha.ComputeHash(clearBytes);
+        return ConvertBytesToHex(hashedBytes);
+    }
+
+    public string ConvertBytesToHex(byte[] bytes)
+    {
+        var sb = new StringBuilder();
+
+        for (var i = 0; i < bytes.Length; i++)
+        {
+            sb.Append(bytes[i].ToString("x"));
+        }
+        return sb.ToString();
+    }
+
+    public bool AreFilesEqual(string filename1, string filename2)
+    {
+        var hash1 = GetFileHash(filename1);
+        var hash2 = GetFileHash(filename2);
+        return hash1 == hash2;
+    }
 
     [TestMethod]
     public void TestFromFile()
@@ -24,4 +53,31 @@ public class PGMTest
         Assert.AreEqual(0x8d88, pgm.WideBuffer[0]);
         Assert.AreEqual(0x2f77, pgm.WideBuffer[pgm.Bytes.Length / 2 - 1]);
     }
+
+    [TestMethod]
+    public void TestBinaryToFile(){
+        var testBytes = new byte[]{
+            0x01, 0x00, 0x20, 0x00, 0x01,
+            0x00, 0x00, 0x40, 0x00, 0x00,
+            0xFF, 0xAA, 0x60, 0xAA, 0xFF,
+            0x00, 0x00, 0x40, 0x00, 0x00,
+            0x01, 0x00, 0x20, 0x00, 0x01
+        };
+
+        PortableAnyMap pgm = new(MagicNumber.P5, 5, 5, 255);
+        pgm.Bytes = testBytes;
+        Assert.AreEqual(0x01, pgm[0]);
+        Assert.AreEqual(0x20, pgm[2]);
+        Assert.AreEqual(0x60, pgm[2,2]);
+        pgm.ToFile("testBinaryTemp.pgm", "test comment");
+
+
+        AreFilesEqual("testBinaryTemp.pgm", "testBinary.pgm");
+
+        pgm = new(MagicNumber.P2, 5, 5, 255);
+        pgm.Bytes = testBytes;
+        pgm.ToFile("testAsciiTemp.pgm", "test comment");
+        AreFilesEqual("testAsciiTemp.pgm", "testAscii.pgm");
+    }
+    
 }

@@ -49,6 +49,11 @@ namespace PNM
             if(magicNumber == null) return false;
             return true;
         }
+
+        public override string ToString()
+        {
+            return "P" + Id;
+        }
     }
 
 }
