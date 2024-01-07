@@ -116,7 +116,7 @@ namespace PNM
             var index = 0;
             while (reader.Peek() != -1)
             {
-                IEnumerable<int> vals = Regex.Split(reader.ReadLine(), "\\s+").Select(s => int.Parse(s));
+                IEnumerable<int> vals = Regex.Split(reader.ReadLine(), "\\s+").Where(s => s != "").Select(s => int.Parse(s));
                 foreach (var val in vals)
                 {
                     pnm[index++] = val;
@@ -133,7 +133,11 @@ namespace PNM
         public static PortableAnyMap FromStreamReader(StreamReader reader)
         {
             var magicNumber = MagicNumber.FromName(reader.ReadLine());
-            if (magicNumber != MagicNumber.P2 && magicNumber != MagicNumber.P5) throw new NotImplementedException();
+            if (magicNumber != MagicNumber.P2 && magicNumber != MagicNumber.P5){
+                Console.WriteLine($"Unsupported magic number {magicNumber}");
+                return null;
+            } 
+                
 
             SkipComments(reader);
 
